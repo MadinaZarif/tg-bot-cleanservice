@@ -4,6 +4,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
+from datetime import datetime
 import requests
 from dotenv import load_dotenv
 import os
@@ -59,15 +60,16 @@ def get_name(update: Update, context: CallbackContext) -> int:
     return ADDRESS_METHOD
 
 def choose_address_method(update: Update, context: CallbackContext) -> int:
-    text = update.message.text
-    if "location" in text.lower():
+    text = update.message.text.lower()
+    if "location" in text or "📍" in text:
         location_button = KeyboardButton(text="📍 Send location", request_location=True)
-        markup = ReplyKeyboardMarkup([[location_button]], resize_keyboard=True)
+        markup = ReplyKeyboardMarkup([[location_button]], resize_keyboard=True, one_time_keyboard=True)
         update.message.reply_text("Please share your location:", reply_markup=markup)
         return ADDRESS
     else:
         update.message.reply_text("Please enter your address:", reply_markup=ReplyKeyboardRemove())
         return ADDRESS
+
 
 def save_location(update: Update, context: CallbackContext) -> int:
     location = update.message.location
@@ -75,9 +77,12 @@ def save_location(update: Update, context: CallbackContext) -> int:
     context.user_data["address"] = address
     
 def save_location(update: Update, context: CallbackContext) -> int:
-    print("Received location:", update)
+    location = update.message.location
+    address = reverse_geocode(location.latitude, location.longitude)
+    context.user_data["address"] = address
     update.message.reply_text("Now please enter your phone number (e.g. +49123456789):")
     return PHONE
+
 
 def get_address(update: Update, context: CallbackContext) -> int:
     context.user_data["address"] = update.message.text
@@ -93,10 +98,50 @@ def get_phone(update: Update, context: CallbackContext) -> int:
     update.message.reply_text("Please enter the date you want the service (e.g. 2025-05-24):")
     return DATE
 
+
+def is_valid_date(date_string):
+    try:
+        datetime.strptime(date_string, "%d-%m-%Y")
+        return True
+    except ValueError:
+        return False
+    
+def is_valid_date(date_text):
+    try:
+        input_date = datetime.strptime(date_text, "%d-%m-%Y")
+        today = datetime.now().date()
+        return input_date.date() >= today
+    except ValueError:
+        return False
+
+def handle_date(update, context):
+    user_input = update.message.text
+
+    if is_valid_date(user_input):
+        context.user_data['date'] = user_input
+        return NEXT_STEP 
+    else:
+        update.message.reply_text(
+            "⚠️ Invalid date format or nonexistent date.\n"
+            "Please enter a valid date in DD-MM-YYYY format (e.g., 01-06-2025)."
+        )
+        return CURRENT_STEP 
+
+
 def get_date(update: Update, context: CallbackContext) -> int:
-    context.user_data["date"] = update.message.text
-    update.message.reply_text("Any comments or special instructions?")
-    return COMMENT
+    user_input = update.message.text
+
+    if is_valid_date(user_input):
+        context.user_data["date"] = user_input
+        update.message.reply_text("Any comments or special instructions?")
+        return COMMENT
+    else:
+        update.message.reply_text(
+            "⚠️ Invalid date format or nonexistent date.\n"
+            "Please enter a valid date in DD-MM-YYYY format (e.g., 01-06-2025)."
+        )
+        return DATE  
+
 
 def get_comment(update: Update, context: CallbackContext) -> int:
     context.user_data["comment"] = update.message.text
