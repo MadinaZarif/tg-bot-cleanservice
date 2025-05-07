@@ -12,8 +12,15 @@ A Telegram bot that collects client data for home cleaning services.
 
 ## 📸 Demo
 
-![demo](docs/demo-screenshot.png)  
-Or see a video here: *your future YouTube or Google Drive link*
+## 📸 Demo Screenshots
+
+Below are demo screenshots showing how the bot works:
+
+![Step 1 - Start Bot](demo/1.png)
+![Step 2 - Choose Address](demo/2.png)
+![Step 3 - Enter Date](demo/3.png)
+![Step 4 - Final Confirmation](demo/4.png)
+
 
 ## 🚀 Run Locally
 
